@@ -5,7 +5,7 @@ import { ErrorHandler, SendError } from "../../services/errorHandeler.js";
 function formatLocalTime(date) {
   if (!date) return null;
   const d = new Date(date);
-  d.setHours(d.getHours() - 3);
+  d.setHours(d.getHours());
   return d.toLocaleTimeString('en-GB', {
     hour12: false,
     hour: '2-digit',
