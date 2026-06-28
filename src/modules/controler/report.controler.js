@@ -5,18 +5,15 @@ import { ErrorHandler, SendError } from "../../services/errorHandeler.js";
 function formatLocalTime(date) {
   if (!date) return null;
   const d = new Date(date);
-  d.setHours(d.getHours());
-  return d.toLocaleTimeString('en-GB', {
-    hour12: false,
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
+  const hours = String(d.getUTCHours()).padStart(2, '0');
+  const minutes = String(d.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(d.getUTCSeconds()).padStart(2, '0');
+  return `${hours}:${minutes}:${seconds}`;
 }
 
 export const getTodayReport = ErrorHandler(async (req, res) => {
   const today = new Date().toISOString().split('T')[0];
-  const nineAM = new Date(`${today}T09:00:00`); 
+  const nineAM = new Date(`${today}T06:00:00`); 
 
   const report = await EmployeeModel.aggregate([
     {
@@ -42,7 +39,7 @@ export const getTodayReport = ErrorHandler(async (req, res) => {
             "absent",
             {
               $cond: [
-                { $gt: ["$attendance.checkIn", nineAM] }, 
+                { $gt: ["$attendance.checkIn", nineAM] },
                 "late",
                 "present"
               ]
@@ -66,7 +63,6 @@ export const getTodayReport = ErrorHandler(async (req, res) => {
       totalEmployees: total,
       present: present + late,
       absent: absent,
-      late: late,
       onTime: present,
       attendanceRate: `${attendanceRate}%`
     },
@@ -125,7 +121,7 @@ export const getAbsentReport = ErrorHandler(async (req, res) => {
 
 export const getLateReport = ErrorHandler(async (req, res) => {
   const today = new Date().toISOString().split('T')[0];
-  const nineAM = new Date(`${today}T09:00:00`);
+  const nineAM = new Date(`${today}T06:00:00`); 
 
   const report = await EmployeeModel.aggregate([
     {
@@ -198,7 +194,7 @@ export const getMonthlyReport = ErrorHandler(async (req, res) => {
     {
       $addFields: {
         totalDays: { $size: "$attendances" },
-        totalWorkingDays: 22
+        totalWorkingDays: 25
       }
     },
     {
@@ -268,7 +264,7 @@ export const getEmployeeReport = ErrorHandler(async (req, res) => {
   }).sort({ date: 1 });
 
   const totalDays = attendances.length;
-  const workingDays = 22;
+  const workingDays = 25;
   const attendanceRate = totalDays > 0 ? ((totalDays / workingDays) * 100).toFixed(1) : 0;
 
   res.status(200).json({
