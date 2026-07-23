@@ -1,6 +1,6 @@
-import * as faceapi from 'face-api.js';  // بدون @vladmandic
+import * as faceapi from 'face-api.js'; 
 import * as canvas from 'canvas';
-import * as tf from '@tensorflow/tfjs';  // بدون -node
+import * as tf from '@tensorflow/tfjs';  
 import path from 'path';
 import { fileURLToPath } from 'url';
 

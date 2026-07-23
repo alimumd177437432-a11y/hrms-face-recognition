@@ -173,7 +173,29 @@ export const getMonthlyReport = ErrorHandler(async (req, res) => {
   const year = parseInt(req.query.year) || new Date().getFullYear();
 
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-  const endDate = `${year}-${String(month).padStart(2, '0')}-${new Date(year, month, 0).getDate()}`;
+  
+  const today = new Date();
+  const currentDay = today.getDate();
+  const currentMonth = today.getMonth() + 1;
+  const currentYear = today.getFullYear();
+
+  let lastDay;
+  if (year === currentYear && month === currentMonth) {
+    lastDay = currentDay; 
+  } else {
+    lastDay = new Date(year, month, 0).getDate(); 
+  }
+
+  const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+  let totalWorkingDays = 0;
+  for (let day = 1; day <= lastDay; day++) {
+    const date = new Date(year, month - 1, day);
+    const dayOfWeek = date.getDay(); 
+    if (dayOfWeek !== 5) { 
+      totalWorkingDays++;
+    }
+  }
 
   const report = await EmployeeModel.aggregate([
     {
@@ -193,15 +215,14 @@ export const getMonthlyReport = ErrorHandler(async (req, res) => {
     },
     {
       $addFields: {
-        totalDays: { $size: "$attendances" },
-        totalWorkingDays: 25
+        totalDays: { $size: "$attendances" }
       }
     },
     {
       $addFields: {
         attendanceRate: {
           $multiply: [
-            { $divide: ["$totalDays", "$totalWorkingDays"] },
+            { $divide: ["$totalDays", totalWorkingDays] },
             100
           ]
         }
@@ -241,6 +262,7 @@ export const getMonthlyReport = ErrorHandler(async (req, res) => {
   res.status(200).json({
     status: "success",
     month: `${year}-${String(month).padStart(2, '0')}`,
+    totalWorkingDays, 
     report: formattedReport
   });
 });
@@ -251,7 +273,29 @@ export const getEmployeeReport = ErrorHandler(async (req, res) => {
   const year = parseInt(req.query.year) || new Date().getFullYear();
 
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-  const endDate = `${year}-${String(month).padStart(2, '0')}-${new Date(year, month, 0).getDate()}`;
+  
+  const today = new Date();
+  const currentDay = today.getDate();
+  const currentMonth = today.getMonth() + 1;
+  const currentYear = today.getFullYear();
+
+  let lastDay;
+  if (year === currentYear && month === currentMonth) {
+    lastDay = currentDay; 
+  } else {
+    lastDay = new Date(year, month, 0).getDate(); 
+  }
+
+  const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+  let totalWorkingDays = 0;
+  for (let day = 1; day <= lastDay; day++) {
+    const date = new Date(year, month - 1, day);
+    const dayOfWeek = date.getDay();
+    if (dayOfWeek !== 5) {
+      totalWorkingDays++;
+    }
+  }
 
   const employee = await EmployeeModel.findById(id);
   if (!employee) {
@@ -264,8 +308,7 @@ export const getEmployeeReport = ErrorHandler(async (req, res) => {
   }).sort({ date: 1 });
 
   const totalDays = attendances.length;
-  const workingDays = 25;
-  const attendanceRate = totalDays > 0 ? ((totalDays / workingDays) * 100).toFixed(1) : 0;
+  const attendanceRate = totalDays > 0 ? ((totalDays / totalWorkingDays) * 100).toFixed(1) : 0;
 
   res.status(200).json({
     status: "success",
@@ -277,7 +320,7 @@ export const getEmployeeReport = ErrorHandler(async (req, res) => {
     },
     period: {
       month: `${year}-${String(month).padStart(2, '0')}`,
-      workingDays: workingDays
+      workingDays: totalWorkingDays 
     },
     summary: {
       totalDays: totalDays,
