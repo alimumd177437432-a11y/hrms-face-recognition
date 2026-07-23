@@ -252,7 +252,13 @@ export const getMonthlyReport = ErrorHandler(async (req, res) => {
     const periodStart = new Date(startDate);
     const periodEnd = new Date(endDate);
 
-    const actualStart = registeredAt > periodStart ? registeredAt : periodStart;
+    const registeredDate = new Date(registeredAt);
+    registeredDate.setHours(0, 0, 0, 0);
+    
+    const startDateObj = new Date(periodStart);
+    startDateObj.setHours(0, 0, 0, 0);
+
+    const actualStart = registeredDate > startDateObj ? registeredDate : startDateObj;
 
     let workingDaysForEmployee = 0;
     const current = new Date(actualStart);
@@ -341,7 +347,14 @@ export const getEmployeeReport = ErrorHandler(async (req, res) => {
   const registeredAt = new Date(employee.createdAt);
   const periodStart = new Date(startDate);
   const periodEnd = new Date(endDate);
-  const actualStart = registeredAt > periodStart ? registeredAt : periodStart;
+
+  const registeredDate = new Date(registeredAt);
+  registeredDate.setHours(0, 0, 0, 0);
+  
+  const startDateObj = new Date(periodStart);
+  startDateObj.setHours(0, 0, 0, 0);
+
+  const actualStart = registeredDate > startDateObj ? registeredDate : startDateObj;
 
   let workingDaysForEmployee = 0;
   const current = new Date(actualStart);
@@ -430,4 +443,3 @@ export const getEarlyCheckOutReport = ErrorHandler(async (req, res) => {
     }))
   });
 });
-//finishing
