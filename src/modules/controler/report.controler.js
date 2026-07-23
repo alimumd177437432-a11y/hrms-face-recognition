@@ -11,7 +11,6 @@ function formatLocalTime(date) {
   return `${hours}:${minutes}:${seconds}`;
 }
 
-// ✅ دالة لحساب أيام العمل بين تاريخين (مع استبعاد الجمعة)
 function getWorkingDaysBetween(startDate, endDate) {
   let count = 0;
   const current = new Date(startDate);
@@ -201,7 +200,7 @@ export const getMonthlyReport = ErrorHandler(async (req, res) => {
   if (year === currentYear && month === currentMonth) {
     lastDay = currentDay; 
   } else {
-    lastDay = new Date(year, month, 0).getDate();
+    lastDay = new Date(year, month, 0).getDate(); 
   }
 
   const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
@@ -241,7 +240,7 @@ export const getMonthlyReport = ErrorHandler(async (req, res) => {
         name: 1,
         employeeId: 1,
         department: 1,
-        createdAt: 1, 
+        createdAt: 1,
         totalDays: 1,
         attendances: 1
       }
@@ -250,10 +249,13 @@ export const getMonthlyReport = ErrorHandler(async (req, res) => {
 
   const formattedReport = report.map(emp => {
     const registeredAt = new Date(emp.createdAt);
+    const periodStart = new Date(startDate);
     const periodEnd = new Date(endDate);
 
+    const actualStart = registeredAt > periodStart ? registeredAt : periodStart;
+
     let workingDaysForEmployee = 0;
-    const current = new Date(registeredAt);
+    const current = new Date(actualStart);
     while (current <= periodEnd) {
       const dayOfWeek = current.getDay();
       if (dayOfWeek !== 5) {
@@ -337,9 +339,12 @@ export const getEmployeeReport = ErrorHandler(async (req, res) => {
   const totalDays = attendances.length;
 
   const registeredAt = new Date(employee.createdAt);
+  const periodStart = new Date(startDate);
   const periodEnd = new Date(endDate);
+  const actualStart = registeredAt > periodStart ? registeredAt : periodStart;
+
   let workingDaysForEmployee = 0;
-  const current = new Date(registeredAt);
+  const current = new Date(actualStart);
   while (current <= periodEnd) {
     const dayOfWeek = current.getDay();
     if (dayOfWeek !== 5) {
@@ -347,6 +352,7 @@ export const getEmployeeReport = ErrorHandler(async (req, res) => {
     }
     current.setDate(current.getDate() + 1);
   }
+
   const absentDays = workingDaysForEmployee - totalDays;
   const attendanceRate = totalDays > 0 ? ((totalDays / workingDaysForEmployee) * 100).toFixed(1) : 0;
 
