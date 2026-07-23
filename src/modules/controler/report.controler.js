@@ -11,6 +11,7 @@ function formatLocalTime(date) {
   return `${hours}:${minutes}:${seconds}`;
 }
 
+// ✅ دالة لحساب أيام العمل بين تاريخين (مع استبعاد الجمعة)
 function getWorkingDaysBetween(startDate, endDate) {
   let count = 0;
   const current = new Date(startDate);
@@ -200,7 +201,7 @@ export const getMonthlyReport = ErrorHandler(async (req, res) => {
   if (year === currentYear && month === currentMonth) {
     lastDay = currentDay; 
   } else {
-    lastDay = new Date(year, month, 0).getDate(); 
+    lastDay = new Date(year, month, 0).getDate();
   }
 
   const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
@@ -236,48 +237,26 @@ export const getMonthlyReport = ErrorHandler(async (req, res) => {
       }
     },
     {
-      $addFields: {
-        attendanceRate: {
-          $multiply: [
-            { $divide: ["$totalDays", totalWorkingDays] },
-            100
-          ]
-        }
-      }
-    },
-    {
       $project: {
         name: 1,
         employeeId: 1,
         department: 1,
         createdAt: 1, 
         totalDays: 1,
-        attendanceRate: { $round: ["$attendanceRate", 1] },
-        attendances: {
-          $map: {
-            input: "$attendances",
-            as: "att",
-            in: {
-              date: "$$att.date",
-              checkIn: "$$att.checkIn",
-              checkOut: "$$att.checkOut"
-            }
-          }
-        }
+        attendances: 1
       }
     }
   ]);
 
   const formattedReport = report.map(emp => {
     const registeredAt = new Date(emp.createdAt);
-    
     const periodEnd = new Date(endDate);
-    
+
     let workingDaysForEmployee = 0;
     const current = new Date(registeredAt);
     while (current <= periodEnd) {
       const dayOfWeek = current.getDay();
-      if (dayOfWeek !== 5) { 
+      if (dayOfWeek !== 5) {
         workingDaysForEmployee++;
       }
       current.setDate(current.getDate() + 1);
@@ -285,10 +264,20 @@ export const getMonthlyReport = ErrorHandler(async (req, res) => {
 
     const absentDays = workingDaysForEmployee - emp.totalDays;
 
+    const attendanceRate = emp.totalDays > 0 
+      ? ((emp.totalDays / workingDaysForEmployee) * 100).toFixed(1) 
+      : 0;
+
     return {
-      ...emp,
+      _id: emp._id,
+      name: emp.name,
+      employeeId: emp.employeeId,
+      department: emp.department,
+      createdAt: emp.createdAt,
+      totalDays: emp.totalDays,
       workingDaysForEmployee,
-      absentDays: absentDays > 0 ? absentDays : 0, 
+      absentDays: absentDays > 0 ? absentDays : 0,
+      attendanceRate: parseFloat(attendanceRate),
       attendances: emp.attendances.map(att => ({
         date: att.date,
         checkIn: att.checkIn ? formatLocalTime(att.checkIn) : null,
@@ -346,7 +335,6 @@ export const getEmployeeReport = ErrorHandler(async (req, res) => {
   }).sort({ date: 1 });
 
   const totalDays = attendances.length;
-  const attendanceRate = totalDays > 0 ? ((totalDays / totalWorkingDays) * 100).toFixed(1) : 0;
 
   const registeredAt = new Date(employee.createdAt);
   const periodEnd = new Date(endDate);
@@ -360,6 +348,7 @@ export const getEmployeeReport = ErrorHandler(async (req, res) => {
     current.setDate(current.getDate() + 1);
   }
   const absentDays = workingDaysForEmployee - totalDays;
+  const attendanceRate = totalDays > 0 ? ((totalDays / workingDaysForEmployee) * 100).toFixed(1) : 0;
 
   res.status(200).json({
     status: "success",
