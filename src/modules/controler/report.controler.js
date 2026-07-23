@@ -11,6 +11,23 @@ function formatLocalTime(date) {
   return `${hours}:${minutes}:${seconds}`;
 }
 
+function getWorkingDaysBetween(startDate, endDate) {
+  let count = 0;
+  const current = new Date(startDate);
+  const end = new Date(endDate);
+  
+  if (current > end) return 0;
+  
+  while (current <= end) {
+    const dayOfWeek = current.getDay();
+    if (dayOfWeek !== 5) { 
+      count++;
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  return count;
+}
+
 export const getTodayReport = ErrorHandler(async (req, res) => {
   const today = new Date().toISOString().split('T')[0];
   const nineAM = new Date(`${today}T06:00:00`); 
@@ -233,6 +250,7 @@ export const getMonthlyReport = ErrorHandler(async (req, res) => {
         name: 1,
         employeeId: 1,
         department: 1,
+        createdAt: 1, 
         totalDays: 1,
         attendanceRate: { $round: ["$attendanceRate", 1] },
         attendances: {
@@ -250,19 +268,39 @@ export const getMonthlyReport = ErrorHandler(async (req, res) => {
     }
   ]);
 
-  const formattedReport = report.map(emp => ({
-    ...emp,
-    attendances: emp.attendances.map(att => ({
-      date: att.date,
-      checkIn: att.checkIn ? formatLocalTime(att.checkIn) : null,
-      checkOut: att.checkOut ? formatLocalTime(att.checkOut) : null
-    }))
-  }));
+  const formattedReport = report.map(emp => {
+    const registeredAt = new Date(emp.createdAt);
+    
+    const periodEnd = new Date(endDate);
+    
+    let workingDaysForEmployee = 0;
+    const current = new Date(registeredAt);
+    while (current <= periodEnd) {
+      const dayOfWeek = current.getDay();
+      if (dayOfWeek !== 5) { 
+        workingDaysForEmployee++;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+
+    const absentDays = workingDaysForEmployee - emp.totalDays;
+
+    return {
+      ...emp,
+      workingDaysForEmployee,
+      absentDays: absentDays > 0 ? absentDays : 0, 
+      attendances: emp.attendances.map(att => ({
+        date: att.date,
+        checkIn: att.checkIn ? formatLocalTime(att.checkIn) : null,
+        checkOut: att.checkOut ? formatLocalTime(att.checkOut) : null
+      }))
+    };
+  });
 
   res.status(200).json({
     status: "success",
     month: `${year}-${String(month).padStart(2, '0')}`,
-    totalWorkingDays, 
+    totalWorkingDays,
     report: formattedReport
   });
 });
@@ -281,9 +319,9 @@ export const getEmployeeReport = ErrorHandler(async (req, res) => {
 
   let lastDay;
   if (year === currentYear && month === currentMonth) {
-    lastDay = currentDay; 
+    lastDay = currentDay;
   } else {
-    lastDay = new Date(year, month, 0).getDate(); 
+    lastDay = new Date(year, month, 0).getDate();
   }
 
   const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
@@ -310,13 +348,27 @@ export const getEmployeeReport = ErrorHandler(async (req, res) => {
   const totalDays = attendances.length;
   const attendanceRate = totalDays > 0 ? ((totalDays / totalWorkingDays) * 100).toFixed(1) : 0;
 
+  const registeredAt = new Date(employee.createdAt);
+  const periodEnd = new Date(endDate);
+  let workingDaysForEmployee = 0;
+  const current = new Date(registeredAt);
+  while (current <= periodEnd) {
+    const dayOfWeek = current.getDay();
+    if (dayOfWeek !== 5) {
+      workingDaysForEmployee++;
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  const absentDays = workingDaysForEmployee - totalDays;
+
   res.status(200).json({
     status: "success",
     employee: {
       id: employee._id,
       name: employee.name,
       employeeId: employee.employeeId,
-      department: employee.department
+      department: employee.department,
+      createdAt: employee.createdAt 
     },
     period: {
       month: `${year}-${String(month).padStart(2, '0')}`,
@@ -324,6 +376,7 @@ export const getEmployeeReport = ErrorHandler(async (req, res) => {
     },
     summary: {
       totalDays: totalDays,
+      absentDays: absentDays > 0 ? absentDays : 0,
       attendanceRate: `${attendanceRate}%`
     },
     attendances: attendances.map(att => ({
