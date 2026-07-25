@@ -12,7 +12,7 @@ faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
 export async function loadModels() {
   const modelPath = path.join(__dirname, '../../models');
   
-  await faceapi.nets.ssdMobilenetv1.loadFromDisk(modelPath);
+  await faceapi.nets.tinyFaceDetector.loadFromDisk(modelPath);
   await faceapi.nets.faceLandmark68Net.loadFromDisk(modelPath);
   await faceapi.nets.faceRecognitionNet.loadFromDisk(modelPath);
   
@@ -21,8 +21,9 @@ export async function loadModels() {
 
 export async function getFaceDescriptor(imageBuffer) {
   const img = await canvas.loadImage(imageBuffer);
+  
   const detection = await faceapi
-    .detectSingleFace(img)
+    .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 320 }))
     .withFaceLandmarks()
     .withFaceDescriptor();
 
