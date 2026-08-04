@@ -3,7 +3,6 @@ import * as canvas from 'canvas';
 import * as tf from '@tensorflow/tfjs';  
 import path from 'path';
 import { fileURLToPath } from 'url';
-import sharp from 'sharp'; 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -21,12 +20,7 @@ export async function loadModels() {
 }
 
 export async function getFaceDescriptor(imageBuffer) {
-  const compressedImage = await sharp(imageBuffer)
-    .resize(320, 320)        
-    .jpeg({ quality: 80 })   
-    .toBuffer();
-
-  const img = await canvas.loadImage(compressedImage);
+  const img = await canvas.loadImage(imageBuffer);
   
   const detection = await faceapi
     .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 320 }))
